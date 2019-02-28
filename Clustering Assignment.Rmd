@@ -1,0 +1,126 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+Emilee Draper
+
+Module 6 Clustering Assignment
+
+```{r}
+library(tidyverse)
+library(cluster)
+#install.packages("factoextra")
+#install.packages("dendextend")
+library(factoextra)
+library(dendextend)
+```
+
+```{r}
+trucks <- read_csv("trucks.csv")
+View(trucks)
+```
+
+TASK 1
+```{r}
+ggplot(trucks, aes(x = Distance, y = Speeding)) +geom_point()
+```
+Yes, there seems to be natural clustering around distance of 25 - 75 with speedings between 0 - 18, and speedings between 20 -60. There is also clustering around distnace 150 - 220 with speedings between 0 - 25, and more loosely around speedings between 40 - 100. 
+
+TASK 2
+```{r}
+trucks = trucks %>% select(-Driver_ID)
+trucks2 = as.data.frame(scale(trucks))
+str(trucks2)
+```
+
+TASK 3
+```{r}
+set.seed(1234)
+clusters1 = kmeans(trucks2, 2)
+fviz_cluster(clusters1, trucks2)
+```
+
+TASK 4
+
+```{r}
+set.seed(123)
+fviz_nbclust(trucks2, kmeans, method ="wss")
+```
+```{r}
+set.seed(123)
+fviz_nbclust(trucks2, kmeans, method = "silhouette")
+```
+Both methods seem to agree on 4 as the appropriate number of clsuters. 
+
+TASK 5
+```{r}
+set.seed(1234)
+clusters2 <- kmeans(trucks2, 4)
+fviz_cluster(clusters2, trucks2)
+```
+
+TASK 6
+
+Cluster 1 is full of drivers who travel further, but have a lower percentage of speeding. Cluster 2 is full of dirivers who travel shorter distance, and have a lower percentage of speeding. Cluster 3 is full of drivers who travel further distance, and have a medium and higher percentage of speeding. Cluster 4 is full of drivers who travel shorter, but have a  medium percentage of speeding. 
+
+
+```{r}
+wine <- read_csv("wineprice.csv")
+View(wine)
+```
+
+```{r}
+wine = wine %>% select(-Year)
+wine = wine %>% select(-FrancePop)
+wine2 = as.data.frame(scale(wine))
+str(wine2)
+```
+
+TASK 7
+```{r}
+set.seed(123)
+fviz_nbclust(wine2, kmeans, method ="wss")
+```
+
+```{r}
+set.seed(123)
+fviz_nbclust(wine2, kmeans, method = "silhouette")
+```
+The first graph I would think 5 or 6 but the second graph shows 5, so I am going to choose 5 as the optimal amount of clusters.
+
+TASK 8
+```{r}
+set.seed(1234)
+clusters <- kmeans(wine2, 5)
+fviz_cluster(clusters, wine2)
+```
+
+TASK 9
+```{r}
+m = c("average", "single", "complete", "ward")
+names(m) = c("average", "single", "complete", "ward")
+
+ac = function(x) {
+  agnes(wine2, method = x)$ac
+}
+map_dbl(m, ac)
+
+```
+```{r}
+hc = agnes(wine2, method = "ward")
+pltree(hc,cex = 0.6, hang = -1, main = "Agglomerative Dendrogram")
+
+plot(hc, cex.axis = .5)
+rect.hclust(hc, k = 5, border =2:6)
+```
+
+TASK 10
+```{r}
+hc2 = diana(wine2)
+pltree(hc2, cex = 0.6, hang = -1, main = "Divisive Dendogram")
+
+plot(hc2, cex.axis = .5)
+rect.hclust(hc2, k = 5, border =2:6)
+```
+

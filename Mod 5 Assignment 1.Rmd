@@ -1,0 +1,142 @@
+---
+title: "Module 5 Assignment 1"
+output: word_document
+---
+```{r}
+library(tidyverse)
+library(caret)
+#install.packages("nnet")
+library(nnet)
+```
+
+```{r}
+library(readr)
+parole <- read_csv("~/Desktop/BAN 502/module 4/parole.csv")
+View(parole)
+```
+
+```{r}
+parole = parole %>% mutate(male = as.factor(as.character(male))) %>%
+	mutate(male = fct_recode(male, "male" = "0" , "female" = "1")) 
+  
+parole = parole %>% mutate(race = as.factor(as.character(race))) %>% 
+  mutate(race = fct_recode(race, "white" = "1", "otherwise" = "2"))
+
+parole = parole %>% mutate(state = as.factor(as.character(state))) %>%
+  mutate(state = fct_recode(state, "kentucky" = "2", "Louisiana" = "3", "Virginia" = "4", "other" = "1")) 
+
+parole = parole %>% mutate(crime = as.factor(as.character(crime))) %>%
+  mutate(crime = fct_recode(crime, "larceny" = "2", "drug-related" = "3", "driving-related" = "4", "other" = "1"))
+
+parole = parole %>% mutate(multiple.offenses = as.factor(as.character(multiple.offenses))) %>%
+	mutate(multiple.offenses = fct_recode(multiple.offenses, "Yes" = "1", "No" = "0")) 
+
+parole = parole %>% mutate(violator = as.factor(as.character(violator))) %>%
+	mutate(violator = fct_recode(violator, "Yes" = "1", "No" = "0"))
+	str(parole)
+```
+
+TASK 1
+```{r}
+set.seed(12345)
+train.rows = createDataPartition(y=parole$violator, p=.7, list = FALSE)	
+train = parole[train.rows,]
+test = parole[-train.rows,]
+```
+
+TASK 2
+```{r}
+start_time = Sys.time()
+
+fitControl = trainControl(method = "cv",			
+				number = 10)
+
+nnetGrid <- expand.grid(size = 12, decay = 0.1)	#12 because 6 variables but some have multiple levels, 0.1 is normal for decay 
+
+set.seed(1234)
+nnetBasic = train(violator ~ .,
+		parole,
+		method = "nnet",
+		tunGrid = nnetGrid,
+		trControl = fitControl,
+		verbose = FALSE,
+		trace = FALSE)
+
+end_time = Sys.time()
+end_time-start_time		
+
+```
+
+TASK 3
+```{r}
+nnetBasic
+```
+
+```{r}
+predNetBasic = predict(nnetBasic, train)
+```
+
+```{r}
+confusionMatrix(predNetBasic, train$violator, positive = "Yes")
+```
+The accuracy is rounds to 90% and naive accuracy is 88%. I would say the model is okay because it is indeed higher than the naive accuracy, but not by much. The model size used was 1 and the decay rate was .1
+
+TASK 4
+```{r}
+Start_time = Sys.time()	
+fitControl = trainControl(method = "cv",			
+				number = 10)
+
+nnetGrid <- expand.grid(size = seq(from = 1, to = 12, by = 1), 
+                      decay = seq(from = 0.1, to = 0.5, by = 0.1))               
+	 
+set.seed(1234)
+nnetFit = train(violator ~ .,
+		parole,
+		method = "nnet",
+		tuneGrid = nnetGrid,
+		trControl = fitControl,
+		verbose = FALSE,
+		trace = FALSE)
+
+end_time = Sys.time()
+end_time-start_time		#shows how long
+
+```
+
+TASK 5
+
+```{r}
+nnetFit
+```
+```{r}
+plot(nnetFit)
+```
+
+```{r}
+predNet = predict(nnetFit, train)
+
+confusionMatrix(predNet, train$violator, positive = "Yes")
+```
+Accuracy and naive accuracy are the same as the model in Task 2. The model size used was 2 and the decay was .4, which are both larger than model in Task 2. 
+
+TASK 6
+```{r}
+predNetBasic = predict(nnetBasic, test)
+```
+
+```{r}
+confusionMatrix(predNetBasic, test$violator, positive = "Yes")
+```
+The accuracy is relatively the same for the training data. Sensitivitity is slighlty decreased and specificity is slightly increased compared to the training set prediction. 
+
+TASK 7
+```{r}
+predNet = predict(nnetFit, test)
+
+confusionMatrix(predNet, test$violator, positive = "Yes")
+```
+The accuracy is also the same for this testing set as the training set from Task 4. Sensitivity is slighltly decreased and specificity is slighlty increased in this prediction. 
+
+TASK 8
+The testing and training data perform almost exactly the same on both models, which leads me to believe that no overfitting has occured. 

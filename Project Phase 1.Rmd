@@ -1,0 +1,117 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+#Emilee Draper
+##Project
+
+```{r}
+options(tidyverse.quiet = TRUE)
+library(tidyverse)
+#install.packages("mice")
+library(mice)
+#install.packages("VIM")
+library(VIM)
+```
+
+```{r}
+rain <- read_csv("~/Desktop/BAN 502/rain.csv")
+View(rain)
+```
+
+```{r}
+str(rain)
+summary(rain)
+```
+```{r}
+rain = rain %>% mutate(RainToday = as.factor(RainToday)) %>%
+  mutate(RainTomorrow = as.factor(RainTomorrow))
+summary(rain)
+```
+
+```{r}
+vim_plot = aggr(rain, numbers = TRUE, prop = c(TRUE, FALSE), cex.axis=.7)
+```
+
+```{r}
+rain = rain %>% select(-Cloud9am)
+rain = rain %>% select(-Cloud3pm)
+
+vim_plot = aggr(rain, numbers = TRUE, prop = c(TRUE, FALSE), cex.axis=.7)
+```
+```{r}
+rain = rain %>% drop_na(Humidity9am)
+rain = rain %>% drop_na(Humidity3pm)
+rain = rain %>% drop_na(Rainfall)
+vim_plot = aggr(rain, numbers = TRUE, prop = c(TRUE, FALSE), cex.axis=.7)
+```
+
+
+```{r}
+rain = rain %>% select(c("Rainfall", "Humidity9am", "Humidity3pm", "Pressure9am", "Pressure3pm", "Temp9am", "Temp3pm", "RainTomorrow"))
+
+imp_Pressure9am = mice(rain, n=1, method= 'pmm', printFlag=FALSE)
+imp_Pressure3pm = mice(rain, n=1, method= 'pmm', printFlag=FALSE)
+```
+
+```{r}
+densityplot(imp_Pressure9am, ~Pressure9am)
+densityplot(imp_Pressure3pm, ~Pressure3pm)
+```
+
+```{r}
+rain_complete = complete(imp_Pressure9am)
+rain_complete = complete(imp_Pressure3pm)
+summary(rain_complete)
+```
+
+```{r}
+View(rain_complete)
+```
+
+```{r}
+library(rpart)
+library(RColorBrewer)
+library(rattle)
+```
+
+```{r}
+tree1 = rpart(RainTomorrow ~., rain_complete, method = "class")
+fancyRpartPlot(tree1)
+
+```
+
+
+
+```{r}
+ggplot(rain_complete, aes(x=Humidity3pm, fill = RainTomorrow))+geom_bar()
+ggsave("humidity.png")
+```
+
+```{r}
+mod1 = glm(RainTomorrow~Humidity3pm, rain_complete, family = "binomial")
+summary(mod1)
+```
+
+```{r}
+ggplot(rain_complete, aes(x = Pressure3pm, fill = RainTomorrow)) + geom_bar()
+```
+
+```{r}
+mod2 = glm(RainTomorrow~Pressure3pm, rain_complete, family = "binomial")
+summary(mod2)
+```
+
+```{r}
+mod3 = glm(RainTomorrow~., rain_complete, family = "binomial")
+summary(mod3)
+```
+
+```{r}
+t1 = table(rain_complete$RainTomorrow, rain_complete$Humidity3pm)
+prop.table(t1, margin = 2)
+```
+
+
+

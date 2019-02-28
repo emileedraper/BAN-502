@@ -1,0 +1,150 @@
+---
+output:
+  word_document: default
+  html_document: default
+---
+
+#Classification Trees
+
+```{r}
+library(tidyverse)
+library(caret)
+library(rpart)
+#install.packages("rattle")
+library(rattle)
+library(RColorBrewer)
+```
+
+```{r}
+parole <- read_csv("~/Desktop/BAN 502/parole.csv")
+View(parole)
+```
+
+```{r}
+parole = parole %>% mutate(male = as.factor(as.character(male))) %>%
+	mutate(male = fct_recode(male, "male" = "0" , "female" = "1")) 
+  
+parole = parole %>% mutate(race = as.factor(as.character(race))) %>% 
+  mutate(race = fct_recode(race, "white" = "1", "otherwise" = "2"))
+
+parole = parole %>% mutate(state = as.factor(as.character(state))) %>%
+  mutate(state = fct_recode(state, "kentucky" = "2", "Louisiana" = "3", "Virginia" = "4", "other" = "1")) 
+
+parole = parole %>% mutate(crime = as.factor(as.character(crime))) %>%
+  mutate(crime = fct_recode(crime, "larceny" = "2", "drug-related" = "3", "driving-related" = "4", "other" = "1"))
+
+parole = parole %>% mutate(multiple.offenses = as.factor(as.character(multiple.offenses))) %>%
+	mutate(multiple.offenses = fct_recode(multiple.offenses, "Yes" = "1", "No" = "0")) 
+
+parole = parole %>% mutate(violator = as.factor(as.character(violator))) %>%
+	mutate(violator = fct_recode(violator, "Yes" = "1", "No" = "0"))
+	str(parole)
+```
+
+TASK 1
+```{r}
+set.seed(12345)
+train.rows = createDataPartition(y=parole$violator, p=.07, list = FALSE)	
+train = parole[train.rows,]
+test = parole[-train.rows,]
+
+```
+
+TASK 2
+```{r}
+tree1 = rpart(violator ~., parole, method = "class")
+fancyRpartPlot(tree1)
+```
+
+
+TASK 3
+
+Starting at the top we would answer no, because the parolee is from Louisiana. Multiple offenses we would answer no, since that wasn't specified. Max sentence we would say yes because we are assuming it was less than 13 years since only 5 were served. For time served we would say yes since it was 5 years. That predicts the parolee is not a violator.
+
+TASK 4
+```{r}
+printcp(tree1)
+plotcp(tree1)
+```
+cp value should be 0.017949 or 0.012821 because they both give the lowest cross validation error of 1.07692
+
+TASK 5
+```{r}
+tree2 = prune(tree1,cp= tree1$cptable[which.min(tree1$cptable[,'xerror']),'CP'])
+summary(tree2)
+
+```
+Class "no" has the most observations.
+
+TASK 6
+
+```{r}
+treepred = predict(tree1, train, type = "class")
+head(treepred)
+
+confusionMatrix(treepred, train$violator, positive = "Yes")
+```
+91.7% accurate, naive accuracy of 87.5% so our model is better. Specificity is .97619 and Sensitivity is 0.50000
+
+TASK 7
+```{r}
+treepred1 = predict(tree1, test, type = "class")
+head(treepred1)
+
+confusionMatrix(treepred1, test$violator, positive = "Yes")
+```
+Accuracy is 91.6% with naive accuracy of 88.5%, which is slightly better than the train data. Sensitivity is .45833 and specificity is .97477
+
+TASK 8
+```{r}
+Blood <- read_csv("~/Desktop/BAN 502/Blood.csv")
+View(Blood)
+```
+
+```{r}
+Blood = Blood %>% mutate(DonatedMarch = as.factor(as.character(DonatedMarch))) %>%
+	mutate(DonatedMarch = fct_recode(DonatedMarch, "No" = "0" , "Yes" = "1")) 
+```
+
+TASK 9
+```{r}
+set.seed(1234)
+train.rows = createDataPartition(y=Blood$DonatedMarch, p=.07, list = FALSE)	
+train2 = Blood[train.rows,]
+test2 = Blood[-train.rows,]
+
+
+tree3 = rpart(DonatedMarch ~., Blood, method = "class")
+fancyRpartPlot(tree3)
+
+printcp(tree3)
+plotcp(tree3)
+```
+cp value of 0.011236 because that gives the lowest error of .88764
+
+TASK 10
+```{r}
+tree4 = prune(tree3,cp= tree3$cptable[which.min(tree3$cptable[,'xerror']),'CP'])
+summary(tree4)
+fancyRpartPlot(tree4)
+
+printcp(tree4)
+plotcp(tree4)
+
+```
+
+```{r}
+treepred2 = predict(tree4, train2, type = "class")
+head(treepred2)
+
+confusionMatrix(treepred2, train2$DonatedMarch, positive = "Yes")
+```
+Training data has accuracy of 79.3% which is better than the 75.5% naive accuracy. 
+
+```{r}
+treepred3 = predict(tree4, test2, type = "class")
+head(treepred3)
+
+confusionMatrix(treepred3, test2$DonatedMarch, positive = "Yes")
+```
+The testing data has a slightly higher accuracy of 81.4% and naive accuracy of 76.3%. I am still confident this is a good model, since both accuracy rates for testing and training set were higher than the naive accuracy. 
